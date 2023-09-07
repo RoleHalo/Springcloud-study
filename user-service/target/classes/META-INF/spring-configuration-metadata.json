@@ -1,0 +1,22 @@
+{
+  "groups": [
+    {
+      "name": "pattern",
+      "type": "com.lm.user.config.PatternProperties",
+      "sourceType": "com.lm.user.config.PatternProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "pattern.dateformat",
+      "type": "java.lang.String",
+      "sourceType": "com.lm.user.config.PatternProperties"
+    },
+    {
+      "name": "pattern.env-share-value",
+      "type": "java.lang.String",
+      "sourceType": "com.lm.user.config.PatternProperties"
+    }
+  ],
+  "hints": []
+}
