@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * 实现Nacos统一配置的pattern属性管理
+ * 实现Nacos统一配置的pattern属性管理  也可以实现配置的热更新
  */
 @Data
 @Component

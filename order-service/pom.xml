@@ -24,6 +24,7 @@
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
         </dependency>
+
         <!--mybatis-->
         <dependency>
             <groupId>org.mybatis.spring.boot</groupId>
@@ -40,10 +41,32 @@
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
         </dependency>
+
         <!-- nacos配置管理依赖 -->
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+        </dependency>
+
+        <!-- feign客户端依赖 -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+
+        <!-- 为feign引入httpclient依赖 -->
+        <dependency>
+            <groupId>io.github.openfeign</groupId>
+            <artifactId>feign-httpclient</artifactId>
+        </dependency>
+
+        <!-- 抽出feign-api 引依赖 -->
+        <dependency>
+            <!--    抽取出的自定义feign模块的组id    -->
+            <groupId>com.lm</groupId>
+            <!--    自定义模块名 feign-api    -->
+            <artifactId>feign-api</artifactId>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
     <build>

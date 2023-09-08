@@ -13,12 +13,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 @RestController
-//@RefreshScope
+//@RefreshScope//热更新
 @RequestMapping("user")
 public class UserController {
     @Autowired
     private UserService userService;
-
+      //获取Nacos统一配置属性值
 //    @Value("${pattern.dateformat}")
 //    private String dateformat;
 
