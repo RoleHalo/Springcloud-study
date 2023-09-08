@@ -107,16 +107,16 @@ feign内部已经封装了ribbon（==**注**：nacos负载均衡也是配置再r
         }
     
         ```
-#### 2-2 feign自定义
-1. 自定义类型：![feign自定义类型](images/feign自定义类型.png)
+#### 2-2 Feign自定义
+1. 自定义类型：![Feign自定义类型](images/feign自定义类型.png)
 2. 自定义日志配置方式
     1. 配置文件方式
         ```
             feign:
           client:
             config:
-        #      default: #feign日志文件 全局 配置
-              userservice: #feign日志文件 局部 配置 对某个微服务生效
+        #      default: #Feign日志文件 全局 配置
+              userservice: #Feign日志文件 局部 配置 对某个微服务生效
                 loggerLevel: FULL #日志文件类型
         ```
     2. java代码方式
@@ -132,10 +132,10 @@ feign内部已经封装了ribbon（==**注**：nacos负载均衡也是配置再r
                 }
             }
             ```
-        2. 通过对启动类（或feign客户端接口类）添加注解配置全局（或局部）自定义bean生效
+        2. 通过对启动类（或Feign客户端接口类）添加注解配置全局（或局部）自定义bean生效
             ```
             1. 启动类修改注解：@EnableFeignClients(defaultConfiguration = FeignClientConfiguration.class)//开启feign的日志全局配置
-            2. feign客户端接口修改注解：@FeignClient(value = "userservice", configuration = FeignClientConfiguration.class)//feign日志文件局部配置
+            2. Feign客户端接口修改注解：@FeignClient(value = "userservice", configuration = FeignClientConfiguration.class)//feign日志文件局部配置
             ```
 #### 2-3 feign性能优化
 - 从底层客户端实现优化
@@ -163,7 +163,7 @@ feign内部已经封装了ribbon（==**注**：nacos负载均衡也是配置再r
     2. 日常一般使用basic或none级别即可
 
 #### 2-4 feign最佳实践分析
-企业实践出来相对较好的feign使用方式
+企业实践出来相对较好的Feign使用方式
 1. 继承：给消费者的FeignCLient与提供者的Controller定义统一的父接口最为标准
     - 面向契约编程
     - 但服务紧耦合
@@ -172,9 +172,9 @@ feign内部已经封装了ribbon（==**注**：nacos负载均衡也是配置再r
     - 耦合度低
     - 代码模块清晰
 3. 以抽取方式实现最佳实践步骤：
-    1. 创建新模块 如：feign-api，引入feign客户端依赖等需要的依赖
+    1. 创建新模块 如：feign-api，引入Feign客户端依赖等需要的依赖
     2. 创建其他服务需要的feign远程调用的client接口及各实体类
-    3. 修改或导入其他服务中的重复配置及实体类为feign下的类，并引入以下自定义的依赖
+    3. 修改或导入其他服务中的重复配置及实体类为Feign下的类，并引入以下自定义的依赖
         ```
                 <!-- 抽出feign-api 引依赖 -->
                 <dependency>
@@ -185,7 +185,7 @@ feign内部已经封装了ribbon（==**注**：nacos负载均衡也是配置再r
                     <version>1.0-SNAPSHOT</version>
                 </dependency>
         ```
-- 当定义的FeignClient不在消费者服务启动类的扫描包范围内时，这些FeignClient的bean则无法成功注入进行使用。如下图报错：![抽出feign后消费者扫描不到需要的包](images/抽出feign后消费者扫描不到需要的包)。解决方案：
+- 当定义的FeignClient不在消费者服务启动类的扫描包范围内时，这些FeignClient的bean则无法成功注入进行使用。如下图报错：![抽出feign后消费者扫描不到需要的包](images/抽出feign后消费者扫描不到需要的包.png)。解决方案：
     1. 启动类中指定feignclient所在包
         ```
         @EnableFeignClients(basePackages = "com.lm.feign")//feign抽出后扫描feign下所有包
