@@ -14,13 +14,13 @@
 ## 一、远程调用
 RestTemplate | Feign远程调用
 ---|---
-Http请求 | /
+Http请求 | 声明式、基于SpringMVC注解
 
 
 
 ### 1. RestTemplate
-- 配置使用步骤：
-    1. 注册：在消费者微服务的启动文件中配置RestTemplate方法 使用@Bean注册为bean
+- 配置使用步骤（消费者微服务）：
+    1. 注册：在启动文件中配置RestTemplate方法 使用@Bean注册为bean
         ```
             @Bean
             public RestTemplate restTemplate(){
@@ -38,7 +38,162 @@ Http请求 | /
             User user = restTemplate.getForObject(url, User.class);   //将结果自动封装为user类
         ```
 
-### 2. Feign远程调用
+### 2. Feign
+#### 2-1 Feign远程调用
+feign内部已经封装了ribbon（==**注**：nacos负载均衡也是配置再ribbon下，所以ribbon和nacos的负载均衡规则不会冲突==），所以会自动实现服务的负载均衡
+- 配置使用步骤（消费者微服务）：
+    1. 引依赖
+        ```
+                <!-- feign客户端依赖 -->
+                <dependency>
+                    <groupId>org.springframework.cloud</groupId>
+                    <artifactId>spring-cloud-starter-openfeign</artifactId>
+                </dependency>
+        ```
+    2. 启动类添加注解，启动feign注解自动装配
+        ```
+        @MapperScan("com.lm.user.mapper")
+        @SpringBootApplication
+        @EnableFeignClients//开启feign的自动装配
+        public class OrderApplication {
+        
+            public static void main(String[] args) {
+                SpringApplication.run(OrderApplication.class, args);
+            }
+        }
+        ```
+    3. 编写feign客户端接口（最好单独建feign客户端包（clients）方便管理）
+        ```
+            /**
+             * feign 远程调用
+             */
+            @FeignClient("userservice")
+            public interface UserClient {
+                @GetMapping("user/{id}")
+                User findById(@PathVariable("id") Long id);
+            }
+        
+        ```
+    4. 使用Client接口实现http请求
+        ```
+        @RestController
+        @RequestMapping("order")
+        public class OrderController {
+        
+            @Autowired
+            private OrderService orderService;
+        
+            //@Autowired
+           // private RestTemplate restTemplate;
+        
+            @Autowired
+            private UserClient userClient;
+        
+            @GetMapping("{orderId}")
+            public Order queryOrderByid(@PathVariable("orderId") Long orderId){
+        
+                Order order = orderService.queryOrderById(orderId);
+                //feign实现远程调用
+                User user = userClient.findById(order.getUserId());
+                
+                //restTemplate远程调用
+                // String url = "http://userservice/user/"+order.getUserId();
+                // User user = restTemplate.getForObject(url, User.class);
+        
+                //封装user到order
+                order.setUser(user);
+                return order ;
+            }
+        }
+    
+        ```
+#### 2-2 feign自定义
+1. 自定义类型：![feign自定义类型](images/feign自定义类型.png)
+2. 自定义日志配置方式
+    1. 配置文件方式
+        ```
+            feign:
+          client:
+            config:
+        #      default: #feign日志文件 全局 配置
+              userservice: #feign日志文件 局部 配置 对某个微服务生效
+                loggerLevel: FULL #日志文件类型
+        ```
+    2. java代码方式
+        1. 先声明一个logger的bean（建议放config包下单独管理）
+            ```
+            /**
+             * feign日志配置注解形式要先声明一个Logger.Level作为bean
+             */
+            public class FeignClientConfiguration {
+                @Bean
+                public Logger.Level feignLogger(){
+                    return Logger.Level.BASIC;//日志类型为basic
+                }
+            }
+            ```
+        2. 通过对启动类（或feign客户端接口类）添加注解配置全局（或局部）自定义bean生效
+            ```
+            1. 启动类修改注解：@EnableFeignClients(defaultConfiguration = FeignClientConfiguration.class)//开启feign的日志全局配置
+            2. feign客户端接口修改注解：@FeignClient(value = "userservice", configuration = FeignClientConfiguration.class)//feign日志文件局部配置
+            ```
+#### 2-3 feign性能优化
+- 从底层客户端实现优化
+    1. URLConnection：默认实现，不支持连接池
+    2. Apache HttpClient ：支持连接池
+        1. 引依赖：消费者微服务中引入httpclient依赖
+            ```
+             <!-- 为feign引入httpclient依赖 -->
+                    <dependency>
+                        <groupId>io.github.openfeign</groupId>
+                        <artifactId>feign-httpclient</artifactId>
+                    </dependency>
+            ```
+        2. 修改配置文件：修改消费者对`feign.httpclient`的配置
+            ```
+            feign:
+              httpclient:
+                enabled: true #开启对htttpClient的支持
+                max-connections: 200 #最大连接数
+                max-connections-per-route: 50 #每个路径的最大连接数
+            ```
+        3. OkHttp：支持连接池
+- 从日志级别设置优化
+    1. 尽量不使用full级别日志（调试错误时可以使用该级别）
+    2. 日常一般使用basic或none级别即可
+
+#### 2-4 feign最佳实践分析
+企业实践出来相对较好的feign使用方式
+1. 继承：给消费者的FeignCLient与提供者的Controller定义统一的父接口最为标准
+    - 面向契约编程
+    - 但服务紧耦合
+    - 且SpringMVC不生效父接口参数，即父接口参数列表中的映射不会被继承（如：参数注解@PathVariavle注解），需要本地重新自定义出来
+2. 抽取：将FeignClient抽取为独立模块，并且把接口相关的pojo、默认的feign配置都放到该模块下，提供给所有服务使用（通过引用依赖进行使用）
+    - 耦合度低
+    - 代码模块清晰
+3. 以抽取方式实现最佳实践步骤：
+    1. 创建新模块 如：feign-api，引入feign客户端依赖等需要的依赖
+    2. 创建其他服务需要的feign远程调用的client接口及各实体类
+    3. 修改或导入其他服务中的重复配置及实体类为feign下的类，并引入以下自定义的依赖
+        ```
+                <!-- 抽出feign-api 引依赖 -->
+                <dependency>
+                    <!--    抽取出的自定义feign模块的组id    -->
+                    <groupId>com.lm</groupId>
+                    <!--    自定义模块名 feign-api    -->
+                    <artifactId>feign-api</artifactId>
+                    <version>1.0-SNAPSHOT</version>
+                </dependency>
+        ```
+- 当定义的FeignClient不在消费者服务启动类的扫描包范围内时，这些FeignClient的bean则无法成功注入进行使用。如下图报错：![抽出feign后消费者扫描不到需要的包](images/抽出feign后消费者扫描不到需要的包)。解决方案：
+    1. 启动类中指定feignclient所在包
+        ```
+        @EnableFeignClients(basePackages = "com.lm.feign")//feign抽出后扫描feign下所有包
+        ```
+    2. 启动类中指定feignClient字节码
+        ```
+        @EnableFeignClients(clients = UserClient.class)//feign抽出后只指定扫描feign下需要的客户端包
+        ```
 
 ---
 
@@ -107,7 +262,7 @@ Eureka-server  | Eureka-client
                   defaultZone: http://127.0.0.1:10086/eureka/
         ```
 ### 2. Riobbon负载均衡
-`微服务在注册中心中拉去服务并进行负载均衡（Ribbon实现），最终确定使用哪个实例`
+###### *微服务在注册中心中拉去服务并进行负载均衡（Ribbon实现），最终确定使用哪个实例*
 - 配置使用步骤：
     1. 修改微服务消费者中业务逻辑代码中的url，用微服务提供者的服务名代替端口号（因为一个服务可能有多个实例，端口号也不一定唯一，配置为指定端口号显然不显示）
         ```
@@ -162,7 +317,7 @@ Ribbon会根据规则选择处一个实例进行响应（默认是`轮询`规则
     1. 下载Nacos （按需求可以更改Nacos端口号，默认8848）
         - GitHub主页：https://github.com/alibaba/nacos
         - GitHub的Release下载页：https://github.com/alibaba/nacos/releases
-    2. 运行: 在Nacos的bin目录下cmd并执行`startup.cmd -m standalone`命令
+    2. 运行: 在Nacos的bin目录下cmd并执行`startup.cmd -m standalone`命令通过非集群方式启动（nacos默认是集群方式启动）
 1. 父工程配置使用步骤
     1. 引依赖
         ```
@@ -391,8 +546,8 @@ graph LR
     1. Nacos远端配置 > 本地配置
     2. `[spring.applicatiom.name]-[spring.profiles.active].yaml` > `[spring.applicatiom.name].yaml`（Nacos内部配置）
 4. Nacos集群的搭建（企业级开发）
-> - ==一个Nacos-client 通过Nginx映射管理多个Nacos结点==
-> - 每个Nacos结点都可以访问同一个MySql集群
+    > - ==一个Nacos-client 通过Nginx映射管理多个Nacos结点==
+    > - 每个Nacos结点都可以访问同一个MySql集群
 - nacos集群配置
     1. 建立名为nacos(1.X版本)/nacos_config(2.X版本)的数据库，并运行nacos安装目录下自带的sql文件(`\conf\nacos-mysql.sql`)进行数据库的构建。
     2. 将nacos安装目录下`/conf/application.properties.example`文件删除`.example`后缀更名为`application.properties`。
@@ -428,7 +583,7 @@ graph LR
                  192.168.1.19:8888
             ```
     5. 使用本机三个不同端口模拟，可通过复制整个nacos文件夹复制三份，分别命名为nacos端口号1、nacos端口号2、nacos端口号3，然后分别更改配置文件`application.properties`中的端口号即可。
-    6. 分别使用命令`startup.cmd`启动三个节点即可完成nacos集群配置。
+    6. 分别使用命令`startup.cmd`启动三个节点即可完成nacos集群配置。（bin目录下通过启动命令`startup.cmd`以集群方式启动）
 - Nginx反向代理配置
     1. 下载Nginx并解压在不含中文的目录下。官方下载：`http://nginx.org/en/download.html`
     2. 配置`nginx.conf`文件，在http任意位置添加一下配置
@@ -464,6 +619,12 @@ graph LR
         }
         	
         ```
+    3. 启动命令：安装目录下cmd通过`start nginx` 或 `start nginx.exe`启动nginx
+        ```
+        nginx -s reload    #重新加载Nginx配置文件，然后以优雅的方式重启Nginx
+        nginx -s stop   #强制停止Nginx服务
+        ```
+
 - 项目文件配置
     1. bootstrap.yml文件中配置server-addr(Nacos集群配置Nginx反向代理==必须要配置bootstrap.yml==，否则根本提前加载不进去Nacos集群ip，更无法负载均衡)
         ```
