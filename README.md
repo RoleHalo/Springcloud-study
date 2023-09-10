@@ -54,7 +54,7 @@ Http请求 | 声明式、基于SpringMVC注解
         ```
 ### Feign
 #### Feign远程调用
-feign内部已经封装了ribbon（==**注**：nacos负载均衡也是配置再ribbon下，所以ribbon和nacos的负载均衡规则不会冲突==），所以会自动实现服务的负载均衡
+feign内部已经封装了ribbon（**注**：nacos负载均衡也是配置再ribbon下，所以ribbon和nacos的负载均衡规则不会冲突），所以会自动实现服务的负载均衡
 - 配置使用步骤（消费者微服务）：
     1. 引依赖
         ```
