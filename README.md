@@ -1,26 +1,39 @@
 # 目录
-[toc]
+- [目录](#目录)
+  - [写在前面](#写在前面)
+  - [远程调用](#远程调用)
+    - [RestTemplate](#resttemplate)
+    - [Feign](#feign)
+      - [Feign远程调用](#feign远程调用)
+      - [Feign自定义](#feign自定义)
+      - [Feign性能优化](#feign性能优化)
+      - [Feign最佳实践分析](#feign最佳实践分析)
+  - [注册中心](#注册中心)
+    - [Eureka注册中心（AP）](#eureka注册中心ap)
+    - [Riobbon负载均衡](#riobbon负载均衡)
+    - [Nacos](#nacos)
+      - [Nacos注册中心（CP+AP）](#nacos注册中心cpap)
+      - [Nacos服务多级存储模型](#nacos服务多级存储模型)
+      - [负载均衡](#负载均衡)
+      - [环境隔离-namespace（最外层/最高隔离级别）](#环境隔离-namespace最外层最高隔离级别)
+      - [Nacos配置管理](#nacos配置管理)
 ## 写在前面
 搭建测试项目各版本：
 ```
     Maven：4.0.0
     jdk：1.8
-    Spring boot：2.3.12.RELEASE（3.0以上不再支持jdk8；）
+    Spring boot：2.3.12.RELEASE（3.0以上不再支持jdk8）
     Springcloud：Hoxton.SR12（sr5以下Spring boot可用2.2.x; sr5及以上用Spring boot2.3.x）
     Mysql：8.0.33
     Mybatis：2.1.1
     Nacos：2.0.3（注意与1.0搭建集群时的配置区别）
     Nginx：1.24.0
 ```
-
-## 一、远程调用
+## 远程调用
 RestTemplate | Feign远程调用
 ---|---
 Http请求 | 声明式、基于SpringMVC注解
-
-
-
-### 1. RestTemplate
+### RestTemplate
 - 配置使用步骤（消费者微服务）：
     1. 注册：在启动文件中配置RestTemplate方法 使用@Bean注册为bean
         ```
@@ -39,9 +52,8 @@ Http请求 | 声明式、基于SpringMVC注解
             String url = "http://userservice/user/"+order.getUserId();
             User user = restTemplate.getForObject(url, User.class);   //将结果自动封装为user类
         ```
-
-### 2. Feign
-#### 2-1 Feign远程调用
+### Feign
+#### Feign远程调用
 feign内部已经封装了ribbon（==**注**：nacos负载均衡也是配置再ribbon下，所以ribbon和nacos的负载均衡规则不会冲突==），所以会自动实现服务的负载均衡
 - 配置使用步骤（消费者微服务）：
     1. 引依赖
@@ -109,7 +121,7 @@ feign内部已经封装了ribbon（==**注**：nacos负载均衡也是配置再r
         }
     
         ```
-#### 2-2 Feign自定义
+#### Feign自定义
 1. 自定义类型：![Feign自定义类型](images/feign自定义类型.png)
 2. 自定义日志配置方式
     1. 配置文件方式
@@ -139,7 +151,7 @@ feign内部已经封装了ribbon（==**注**：nacos负载均衡也是配置再r
             1. 启动类修改注解：@EnableFeignClients(defaultConfiguration = FeignClientConfiguration.class)//开启feign的日志全局配置
             2. Feign客户端接口修改注解：@FeignClient(value = "userservice", configuration = FeignClientConfiguration.class)//feign日志文件局部配置
             ```
-#### 2-3 feign性能优化
+#### Feign性能优化
 - 从底层客户端实现优化
     1. URLConnection：默认实现，不支持连接池
     2. Apache HttpClient ：支持连接池
@@ -164,7 +176,7 @@ feign内部已经封装了ribbon（==**注**：nacos负载均衡也是配置再r
     1. 尽量不使用full级别日志（调试错误时可以使用该级别）
     2. 日常一般使用basic或none级别即可
 
-#### 2-4 feign最佳实践分析
+#### Feign最佳实践分析
 企业实践出来相对较好的Feign使用方式
 1. 继承：给消费者的FeignCLient与提供者的Controller定义统一的父接口最为标准
     - 面向契约编程
@@ -196,20 +208,13 @@ feign内部已经封装了ribbon（==**注**：nacos负载均衡也是配置再r
         ```
         @EnableFeignClients(clients = UserClient.class)//feign抽出后只指定扫描feign下需要的客户端包
         ```
-
 ---
-
-
-
-
-## 二、注册中心
-
+## 注册中心
 Eureka| Nacos
 ---|---
 AP | AP+CP
 Ribbon | Ribbon
-
-### 1. Eureka注册中心（AP）
+### Eureka注册中心（AP）
 Eureka-server  | Eureka-client
 ---|---
 记录微服务信息 | 各个微服务
@@ -263,7 +268,7 @@ Eureka-server  | Eureka-client
                 service-url:
                   defaultZone: http://127.0.0.1:10086/eureka/
         ```
-### 2. Riobbon负载均衡
+### Riobbon负载均衡
 *微服务在注册中心中拉去服务并进行负载均衡（Ribbon实现），最终确定使用哪个实例*
 - 配置使用步骤：
     1. 修改微服务消费者中业务逻辑代码中的url，用微服务提供者的服务名代替端口号（因为一个服务可能有多个实例，端口号也不一定唯一，配置为指定端口号显然不显示）
@@ -312,8 +317,8 @@ Ribbon会根据规则选择处一个实例进行响应（默认是`轮询`规则
                 enabled: true #是否开启饥饿加载
                 clients: userservice #提供者微服务注册名，指定对某个或某些提供者微服务进行饥饿加载
             ```
-### 3. Nacos
-#### 3-1. Nacos注册中心（CP+AP）
+### Nacos
+#### Nacos注册中心（CP+AP）
 - 注：属于Spring配置
 0. 准备工作： 
     1. 下载Nacos （按需求可以更改Nacos端口号，默认8848）
@@ -373,7 +378,7 @@ Ribbon会根据规则选择处一个实例进行响应（默认是`轮询`规则
                 ephemeral: false #是否为临时实例，默认为true
         ```
         无特殊需求推荐使用临时实例，会一定程度降低服务运行压力
-#### 3-2. Nacos服务多级存储模型
+#### Nacos服务多级存储模型
 - 服务级别（从上到下级别从低到高）
     1. 服务：例如userservice
     2. 集群：例如上海或者杭州
@@ -392,13 +397,13 @@ Ribbon会根据规则选择处一个实例进行响应（默认是`轮询`规则
                 NFLoadBalancerRuleClassName: com.alibaba.cloud.nacos.ribbon.NacosRule # 负载均衡规则 com.netflix.loadbalancer.RandomRule(随机访问)/ com.alibaba.cloud.nacos.ribbon.NacosRule(Nacos集群)
             ```
     3. 实例：例如在杭州机房的某台部署了userservice的服务器
-#### 3-3. 负载均衡
+#### 负载均衡
 1. 可在优先同集群，集群内随机的基础上添加权重实现Nacos的权重负载均衡
     1. 在Nacos的后台控制界面中选择相对性的提供者微服务，点击“编辑”按钮，填写权重值保存即可
     2. 权重值可以为：0-1（==权重为0则完全不会访问==）
 2. 可用于实现“不停服维护”之类的开发操作
 
-#### 3-4. 环境隔离-namespace（最外层/最高隔离级别）
+#### 环境隔离-namespace（最外层/最高隔离级别）
 ```
     graph LR
     namespace-->group
@@ -415,7 +420,7 @@ Ribbon会根据规则选择处一个实例进行响应（默认是`轮询`规则
           discovery:
             namespace: 02abc9ce-8f77-4132-b105-74f36e0267fa # 命名空间ID
     ```
-#### 3-5. Nacos配置管理
+#### Nacos配置管理
 1. 统一配置管理
 - 配置更改热更新
 - bootstrap.yml的加载在application.yml之前
@@ -540,7 +545,6 @@ graph LR
                 }
                 
                 ```
-
 3. 多环境配置共享
 - 如某些配置在开发、测试、发布等环境中值相同，则可以共享配置
 - 微服务会从Nacos中读取多个配置文件`[spring.applicatiom.name]-[spring.profiles.active].yaml`、`[spring.applicatiom.name].yaml`。且无论profile怎么变化，`[spring.applicatiom.name].yaml`一定会被加载，所以共享配置可以写入该配置文件中。
@@ -626,7 +630,6 @@ graph LR
         nginx -s reload    #重新加载Nginx配置文件，然后以优雅的方式重启Nginx
         nginx -s stop   #强制停止Nginx服务
         ```
-
 - 项目文件配置
     1. bootstrap.yml文件中配置server-addr(Nacos集群配置Nginx反向代理==必须要配置bootstrap.yml==，否则根本提前加载不进去Nacos集群ip，更无法负载均衡)
         ```
