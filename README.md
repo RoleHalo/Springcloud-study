@@ -10,7 +10,7 @@
       - [Feign最佳实践分析](#feign最佳实践分析)
   - [注册中心](#注册中心)
     - [Eureka注册中心（AP）](#eureka注册中心ap)
-    - [Riobbon负载均衡](#riobbon负载均衡)
+    - [Ribbon负载均衡](#ribbon负载均衡)
     - [Nacos](#nacos)
       - [Nacos注册中心（CP+AP）](#nacos注册中心cpap)
       - [Nacos服务多级存储模型](#nacos服务多级存储模型)
@@ -268,7 +268,7 @@ Eureka-server  | Eureka-client
                 service-url:
                   defaultZone: http://127.0.0.1:10086/eureka/
         ```
-### Riobbon负载均衡
+### Ribbon负载均衡
 *微服务在注册中心中拉去服务并进行负载均衡（Ribbon实现），最终确定使用哪个实例*
 - 配置使用步骤：
     1. 修改微服务消费者中业务逻辑代码中的url，用微服务提供者的服务名代替端口号（因为一个服务可能有多个实例，端口号也不一定唯一，配置为指定端口号显然不显示）
